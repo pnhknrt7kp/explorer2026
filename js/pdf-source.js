@@ -9,7 +9,14 @@
  * rest.
  */
 
-const WORKER_SRC = 'vendor/pdfjs/pdf.worker.min.mjs';
+/*
+ * Deliberately .js and not .mjs, even though these are ES modules. Plenty of web
+ * servers — IIS and stock Apache among them — have no MIME mapping for .mjs and
+ * serve it as application/octet-stream, which browsers refuse to execute as a
+ * module. The result is a blank page and a console error. Naming them .js means
+ * the folder drops onto any server with no configuration at all.
+ */
+const WORKER_SRC = 'vendor/pdfjs/pdf.worker.min.js';
 
 // Long edge ceiling per page canvas, independent of DPR. Keeps a single canvas
 // well inside mobile Safari's per-canvas limits.
@@ -30,7 +37,7 @@ const textCache = new Map();
  * @param {(loaded:number, total:number)=>void} [onProgress]
  */
 export async function open(url, onProgress) {
-  pdfjs = await import('../vendor/pdfjs/pdf.min.mjs');
+  pdfjs = await import('../vendor/pdfjs/pdf.min.js');
   pdfjs.GlobalWorkerOptions.workerSrc = WORKER_SRC;
 
   const task = pdfjs.getDocument({

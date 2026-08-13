@@ -84,11 +84,44 @@ Push this folder to a GitHub repository, then in the repository go to
 **Settings › Pages** and set the source to the `main` branch, root folder. The
 site appears at `https://<your-username>.github.io/<repository-name>/`.
 
-### Any other web server
+### Your own web server
 
-Copy the whole folder up as-is. It uses only relative links, so it works at the
-root of a domain or in a subfolder without changes. Nothing needs installing on
-the server.
+Copy the whole folder up as-is, anywhere the server publishes files. That is the
+entire deployment. Specifically:
+
+- **No install, no build, no runtime.** There is no Node, PHP, Python or database
+  involved. Every file is static; the browser does all the work.
+- **No server configuration.** Only ordinary `.html`, `.css`, `.js`, `.pdf` and
+  `.svg` files are used, which every web server already serves correctly.
+- **Any location works.** All links are relative, so the root of a domain, a
+  subfolder, or a virtual directory are all fine, with no changes.
+
+Optional tidying: `.nojekyll` is only meaningful on GitHub Pages, and
+`package.json` / `package-lock.json` are just a record of which library versions
+were vendored. Deleting all three changes nothing. Keeping them is harmless.
+
+#### Checking it worked
+
+Open the site and confirm the cover appears and pages turn. If you get a **blank
+page**, open the browser console (**F12**) — it will name the file it could not
+load, which is nearly always a permissions or path problem rather than anything
+in the viewer.
+
+Then check a phone on the same network, since that is where the file size of the
+PDF is felt most.
+
+#### If your server is locked down
+
+Two things the viewer needs, both of which are default behaviour everywhere:
+
+| Requirement | Why | If it is blocked |
+|---|---|---|
+| Serve `.js` as JavaScript | The viewer is ES modules | Universally mapped; nothing to do |
+| Allow `HEAD` requests | Used to detect a replaced PDF and bypass browser caches | Falls back automatically; readers may need to force-refresh after a new edition is uploaded |
+
+Byte-range requests are used if available, so a large PDF starts displaying
+before it has fully downloaded. If your server does not support them the whole
+file is fetched first instead — slower to first page, but it still works.
 
 ### One important limitation
 
