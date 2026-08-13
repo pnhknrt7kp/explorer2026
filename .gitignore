@@ -1,0 +1,7 @@
+node_modules/
+.DS_Store
+
+# Local-only documents. Keep unreleased or draft PDFs under a *.local.pdf name
+# so they cannot be committed to a public repository by accident. Preview one
+# with ?pdf=assets/document.local.pdf
+*.local.pdf

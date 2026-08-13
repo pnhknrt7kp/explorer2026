@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#012169">
+<title>The Explorer</title>
+<!-- Inline so browsers stop requesting /favicon.ico from the server root, which
+     404s on every load and, on a subdirectory deployment, points outside it. -->
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23012169'/%3E%3Cpath d='M16 9v15M16 9c-1.8-1.3-4.2-2-6.5-2H7v15h2.5c2.3 0 4.7.7 6.5 2M16 9c1.8-1.3 4.2-2 6.5-2H25v15h-2.5c-2.3 0-4.7.7-6.5 2' fill='none' stroke='%23ffffff' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/flipbook.css">
+<script src="config.js"></script>
+</head>
+<body>
+
+<header class="bar" id="toolbar">
+  <div class="bar-group">
+    <button type="button" class="icon-btn" id="btn-panel" aria-label="Pages and contents" aria-expanded="false" aria-controls="panel">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <h1 class="bar-title" id="doc-title">The Explorer</h1>
+  </div>
+
+  <div class="bar-group">
+    <button type="button" class="icon-btn" id="btn-contents" aria-label="Go to contents" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h3M4 12h3M4 18h3M10 6h10M10 12h10M10 18h10"/></svg>
+    </button>
+    <button type="button" class="icon-btn" id="btn-search" aria-label="Search" aria-expanded="false" aria-controls="search-drawer">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg>
+    </button>
+    <button type="button" class="icon-btn" id="btn-select" aria-label="Select text" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h6M8 4v13M5 17h6"/><path d="M14 9h5M16.5 9v8M14 17h5"/></svg>
+    </button>
+    <button type="button" class="icon-btn" id="btn-zoom" aria-label="Zoom into page">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21M8 11h6M11 8v6"/></svg>
+    </button>
+    <a class="icon-btn" id="btn-download" href="assets/document.pdf" download aria-label="Download the PDF">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 11l5 5 5-5M4 20h16"/></svg>
+    </a>
+    <button type="button" class="icon-btn" id="btn-fullscreen" aria-label="Full screen">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+    </button>
+  </div>
+</header>
+
+<!-- Search -->
+<div class="drawer" id="search-drawer" hidden>
+  <form class="search-form" id="search-form" role="search">
+    <label class="sr-only" for="search-input">Search the magazine</label>
+    <input type="search" id="search-input" placeholder="Search the magazine…" autocomplete="off" spellcheck="false">
+    <button type="button" class="text-btn" id="search-close">Close</button>
+  </form>
+  <p class="search-status" id="search-status" role="status" aria-live="polite"></p>
+  <ul class="search-results" id="search-results"></ul>
+</div>
+
+<!-- Thumbnails -->
+<aside class="panel" id="panel" aria-label="Pages" inert>
+  <div class="panel-head">
+    <span class="panel-title">Pages</span>
+    <button type="button" class="text-btn" id="panel-close" aria-label="Close pages panel">Close</button>
+  </div>
+  <ol class="thumbs" id="thumbs"></ol>
+</aside>
+<div class="scrim" id="scrim" hidden></div>
+
+<!-- Stage -->
+<main class="stage" id="stage">
+  <div class="book-wrap" id="book-wrap">
+    <div id="book" class="book"></div>
+  </div>
+
+  <div class="pager" id="pager" hidden>
+    <button type="button" class="pager-btn" id="btn-prev" aria-label="Previous page">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>
+    </button>
+    <form class="pager-form" id="pager-form">
+      <label class="sr-only" for="page-input">Page number</label>
+      <input type="text" inputmode="numeric" pattern="[0-9]*" id="page-input" value="1" aria-describedby="page-total">
+      <span class="pager-total" id="page-total">/ 0</span>
+    </form>
+    <button type="button" class="pager-btn" id="btn-next" aria-label="Next page">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg>
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div class="overlay" id="loading">
+    <div class="overlay-inner">
+      <p class="overlay-title">Loading The Explorer…</p>
+      <div class="progress"><div class="progress-fill" id="progress-fill"></div></div>
+      <p class="overlay-note" id="loading-note">Fetching the magazine</p>
+    </div>
+  </div>
+
+  <!-- Errors -->
+  <div class="overlay" id="error" hidden>
+    <div class="overlay-inner">
+      <p class="overlay-title" id="error-title">Something went wrong</p>
+      <p class="overlay-note" id="error-message"></p>
+      <a class="cta" id="error-download" href="assets/document.pdf" download>Download the PDF instead</a>
+    </div>
+  </div>
+</main>
+
+<!-- Zoom -->
+<div class="zoom" id="zoom" hidden>
+  <div class="zoom-bar">
+    <span class="zoom-label" id="zoom-label">Page 1</span>
+    <div class="zoom-actions">
+      <button type="button" class="icon-btn on-dark" id="zoom-out" aria-label="Zoom out">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 12h12"/></svg>
+      </button>
+      <button type="button" class="icon-btn on-dark" id="zoom-in" aria-label="Zoom in">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6v12M6 12h12"/></svg>
+      </button>
+      <button type="button" class="icon-btn on-dark" id="zoom-close" aria-label="Close zoom">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+  </div>
+  <div class="zoom-viewport" id="zoom-viewport">
+    <div class="zoom-surface" id="zoom-surface">
+      <canvas id="zoom-canvas"></canvas>
+      <div class="text-layer" id="zoom-text"></div>
+    </div>
+  </div>
+  <p class="zoom-hint" id="zoom-hint">Pinch or scroll to zoom · drag to pan</p>
+</div>
+
+<p class="sr-only" id="live" role="status" aria-live="polite"></p>
+
+<script src="vendor/page-flip/page-flip.browser.js"></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
