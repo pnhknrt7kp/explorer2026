@@ -179,6 +179,23 @@ body {
   color: var(--slate);
 }
 
+/* Indexing still running: make it obvious the answer is not final yet. */
+.search-status.busy {
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.search-status.busy::before {
+  content: "";
+  flex: 0 0 auto;
+  width: 10px; height: 10px;
+  border: 2px solid rgba(32, 136, 202, .3);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+
 .search-results {
   list-style: none;
   margin: 0;

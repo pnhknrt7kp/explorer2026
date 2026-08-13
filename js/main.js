@@ -240,16 +240,22 @@ function runSearch() {
 
   const hits = search.query(term);
 
+  // While the index is incomplete, say so plainly and promise the update, rather
+  // than presenting a partial count as if it were the answer.
+  const pending = !search.isReady();
+  ui.searchStatus.classList.toggle('busy', pending);
+
   if (!hits.length) {
-    ui.searchStatus.textContent = search.isReady()
-      ? `No matches for “${term}”.`
-      : `No matches yet — still preparing search (${search.indexedCount()} of ${pageCount} pages).`;
+    ui.searchStatus.textContent = pending
+      ? `Still reading the magazine (${search.indexedCount()} of ${pageCount} pages) — results will appear here.`
+      : `No matches for “${term}”.`;
     return;
   }
 
-  ui.searchStatus.textContent = `${hits.length} page${hits.length === 1 ? '' : 's'} match “${term}”${
-    search.isReady() ? '' : ' so far'
-  }.`;
+  const count = `${hits.length} page${hits.length === 1 ? '' : 's'} match “${term}”`;
+  ui.searchStatus.textContent = pending
+    ? `${count} so far — still reading (${search.indexedCount()} of ${pageCount} pages).`
+    : `${count}.`;
 
   const frag = document.createDocumentFragment();
   for (const hit of hits) {
@@ -311,6 +317,13 @@ function setSelecting(on) {
   selecting = on;
   ui.selectBtn.setAttribute('aria-pressed', String(on));
   flipbook.setSelecting(on);
+
+  // A selection left highlighted swallows the next drag, so turning the mode off
+  // has to clear it or the first attempt to flip a page appears to do nothing.
+  if (!on) {
+    const sel = window.getSelection();
+    if (sel) sel.removeAllRanges();
+  }
   ui.live.textContent = on
     ? 'Text selection on. Use the arrows or page list to turn pages.'
     : 'Text selection off. Drag a page to turn it.';
@@ -536,7 +549,13 @@ async function boot() {
           ui.contentsBtn.hidden = false;
         }
       })
-      .finally(() => search.build(pageCount, renderSearchStatus));
+      .finally(() =>
+        search.build(pageCount, renderSearchStatus, () => {
+          // Re-run any query typed while the index was still building; its
+          // result was incomplete and would otherwise stay wrong on screen.
+          if (ui.searchInput.value.trim().length >= 2) runSearch();
+        }),
+      );
   } catch (err) {
     console.error(err);
     showError(...describeFailure(err));

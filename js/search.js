@@ -13,9 +13,18 @@
 
 import * as pdfSource from './pdf-source.js';
 
-const CHUNK_SIZE = 8;
+const CHUNK_SIZE = 12;
 const MAX_RESULTS = 80;
 const SNIPPET_RADIUS = 60;
+
+/*
+ * Characters removed to build the "tight" index. Whitespace covers the case
+ * where a PDF's text stream drops the space at a line break; hyphens cover the
+ * opposite and far more common case in a typeset magazine, where a word is
+ * split across lines as "Wash- ington" or "reconnais- sance". Stripping both
+ * from the page text and from the query makes either form findable.
+ */
+const TIGHT_STRIP = /[\s­‐-―-]+/g;
 
 /** page number -> { spaced, tight, items } */
 const index = new Map();
@@ -24,6 +33,7 @@ let pageCount = 0;
 let building = false;
 let built = false;
 let onStatus = null;
+let onDone = null;
 
 /** Collapses case, whitespace and diacritics so search is forgiving. */
 function normalize(text) {
@@ -65,7 +75,7 @@ async function indexPage(pageNum) {
   }
 
   const normSpaced = normalize(spaced);
-  const normTight = normalize(spaced.replace(/\s+/g, ''));
+  const normTight = normalize(spaced).replace(TIGHT_STRIP, '');
 
   index.set(pageNum, {
     spaced: normSpaced,
@@ -80,14 +90,18 @@ async function indexPage(pageNum) {
  * @param {number} total
  * @param {(done:number, total:number)=>void} statusCb
  */
-export function build(total, statusCb) {
+export function build(total, statusCb, doneCb) {
   pageCount = total;
   onStatus = statusCb;
+  onDone = doneCb;
   if (building || built) return;
   building = true;
 
+  // A plain requestIdleCallback is starved while pages are rendering, which on a
+  // long document left searches returning partial results for many seconds. The
+  // timeout makes the browser run each chunk even when it is busy.
   const idle = window.requestIdleCallback
-    ? window.requestIdleCallback
+    ? (fn) => window.requestIdleCallback(fn, { timeout: 150 })
     : (fn) => setTimeout(() => fn({ timeRemaining: () => 8 }), 16);
 
   let next = 1;
@@ -111,6 +125,9 @@ export function build(total, statusCb) {
       building = false;
       built = true;
       if (onStatus) onStatus(pageCount, pageCount);
+      // Lets the UI re-run whatever the reader already typed, so a search made
+      // while indexing corrects itself instead of standing as a wrong answer.
+      if (onDone) onDone();
     }
   };
 
@@ -134,7 +151,7 @@ export function query(rawQuery) {
   const q = collapse(normalize(rawQuery));
   if (q.length < 2) return [];
 
-  const qTight = q.replace(/\s+/g, '');
+  const qTight = q.replace(TIGHT_STRIP, '');
   const results = [];
 
   // Sorted so results read in page order.
@@ -175,9 +192,12 @@ export function query(rawQuery) {
  * offset in the spaced string, by counting non-space characters.
  */
 function mapTightToSpaced(spaced, tightOffset) {
+  // Must skip exactly the characters TIGHT_STRIP removed, or the offset drifts
+  // and the wrong text items get highlighted.
+  const skip = /[\s­‐-―-]/;
   let seen = 0;
   for (let i = 0; i < spaced.length; i++) {
-    if (!/\s/.test(spaced[i])) {
+    if (!skip.test(spaced[i])) {
       if (seen === tightOffset) return i;
       seen++;
     }

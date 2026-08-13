@@ -48,6 +48,17 @@ function buildPages(container, count) {
 
     const textLayer = document.createElement('div');
     textLayer.className = 'text-layer';
+
+    // StPageFlip listens for mousedown on its own block element — an ancestor of
+    // this layer — and calls preventDefault() to drive the drag-to-flip gesture.
+    // That also cancels the browser's native text selection, so enabling
+    // pointer-events on the layer is not enough on its own. Stopping propagation
+    // here keeps the event from reaching StPageFlip while leaving the default
+    // action intact, which is what actually starts a selection.
+    textLayer.addEventListener('mousedown', (event) => {
+      if (document.body.classList.contains('selecting')) event.stopPropagation();
+    });
+
     el.appendChild(textLayer);
 
     const spinner = document.createElement('div');
