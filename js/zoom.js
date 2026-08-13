@@ -12,7 +12,6 @@
  */
 
 import * as pdfSource from './pdf-source.js';
-import { buildTextLayer, clearTextLayer } from './text-layer.js';
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 6;
@@ -77,7 +76,6 @@ export async function open(page) {
 export function close() {
   els.root.hidden = true;
   document.body.style.overflow = '';
-  clearTextLayer(els.text);
   // Release the zoom canvas — it can be the largest single canvas in the app.
   els.canvas.width = 0;
   els.canvas.height = 0;
@@ -129,8 +127,6 @@ async function renderAt(targetScale) {
     canvas.height = 0;
 
     renderedAtScale = targetScale;
-
-    await buildTextLayer(pageNum, els.text, baseWidth);
   } catch (err) {
     console.warn('Zoom render failed', err);
   } finally {
@@ -201,9 +197,6 @@ function maybeResharpen() {
 }
 
 function onPointerDown(e) {
-  // Let the text layer handle its own selection gestures.
-  if (e.target.closest('.text-layer span')) return;
-
   els.viewport.setPointerCapture(e.pointerId);
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   hideHint();

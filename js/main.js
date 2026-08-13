@@ -1,18 +1,16 @@
 /*
  * main.js — bootstrap and wiring.
  *
- * Loads the PDF, starts the flipbook, and connects the toolbar, panel, search,
- * zoom, keyboard and URL state. Also owns the failure messages: a reader who
- * hits a problem should always be told what happened in plain words and offered
- * the PDF directly rather than left looking at a blank stage.
+ * Loads the PDF, starts the flipbook, and connects the toolbar, panel, zoom,
+ * keyboard and URL state. Also owns the failure messages: a reader who hits a
+ * problem should always be told what happened in plain words and offered the
+ * PDF directly rather than left looking at a blank stage.
  */
 
 import * as pdfSource from './pdf-source.js';
 import * as flipbook from './flipbook.js';
 import * as thumbnails from './thumbnails.js';
 import * as zoom from './zoom.js';
-import * as search from './search.js';
-import { highlightItems, clearHighlights } from './text-layer.js';
 
 const DEFAULTS = {
   title: 'The Explorer',
@@ -26,9 +24,7 @@ const config = Object.assign({}, DEFAULTS, window.FLIPBOOK_CONFIG || {});
 const el = (id) => document.getElementById(id);
 
 const ui = {
-  toolbar: el('toolbar'),
   title: el('doc-title'),
-  stage: el('stage'),
   bookWrap: el('book-wrap'),
   book: el('book'),
   pager: el('pager'),
@@ -42,14 +38,6 @@ const ui = {
   scrim: el('scrim'),
   thumbs: el('thumbs'),
   contentsBtn: el('btn-contents'),
-  searchBtn: el('btn-search'),
-  searchDrawer: el('search-drawer'),
-  searchForm: el('search-form'),
-  searchInput: el('search-input'),
-  searchClose: el('search-close'),
-  searchStatus: el('search-status'),
-  searchResults: el('search-results'),
-  selectBtn: el('btn-select'),
   zoomBtn: el('btn-zoom'),
   download: el('btn-download'),
   fullscreenBtn: el('btn-fullscreen'),
@@ -65,10 +53,9 @@ const ui = {
 
 let pageCount = 0;
 let contentsPage = null;
+let panelOpen = false;
 /** The path actually being loaded, which ?pdf= can override. */
 let activePdfPath = config.pdfPath;
-let selecting = false;
-let lastHighlight = null;
 
 /* ---------------- error and loading states ---------------- */
 
@@ -80,7 +67,7 @@ function showError(title, message) {
 
   // Without a document these controls do nothing, and offering them invites the
   // reader to click around a broken page. Download stays — it may still work.
-  for (const btn of [ui.panelBtn, ui.searchBtn, ui.selectBtn, ui.zoomBtn, ui.contentsBtn]) {
+  for (const btn of [ui.panelBtn, ui.zoomBtn, ui.contentsBtn]) {
     if (btn) btn.hidden = true;
   }
 }
@@ -132,13 +119,11 @@ async function versionedUrl(path) {
     const tag = res.headers.get('ETag') || res.headers.get('Last-Modified');
     if (!tag) return path;
 
-    // Short, URL-safe token derived from the header.
     let hash = 0;
     for (let i = 0; i < tag.length; i++) {
       hash = (hash * 31 + tag.charCodeAt(i)) | 0;
     }
-    const token = Math.abs(hash).toString(36);
-    return `${path}${path.includes('?') ? '&' : '?'}v=${token}`;
+    return `${path}${path.includes('?') ? '&' : '?'}v=${Math.abs(hash).toString(36)}`;
   } catch {
     // HEAD unsupported or blocked — load the plain URL rather than fail.
     return path;
@@ -178,18 +163,9 @@ function onPageChange(page, total) {
   thumbnails.setCurrent(page);
   writeUrl(page);
   ui.live.textContent = `Page ${page} of ${total}`;
-
-  // A highlight from a previous search result shouldn't follow the reader.
-  if (lastHighlight && lastHighlight !== page) {
-    const prevEl = flipbook.getPageElement(lastHighlight);
-    if (prevEl) clearHighlights(prevEl.querySelector('.text-layer'));
-    lastHighlight = null;
-  }
 }
 
 /* ---------------- panel ---------------- */
-
-let panelOpen = false;
 
 function setPanel(open) {
   panelOpen = open;
@@ -204,86 +180,6 @@ function setPanel(open) {
   ui.scrim.hidden = !open;
   ui.scrim.classList.toggle('show', open);
   if (open) thumbnails.setCurrent(flipbook.getCurrentPage());
-}
-
-/* ---------------- search ---------------- */
-
-function setSearch(open) {
-  ui.searchDrawer.hidden = !open;
-  ui.searchBtn.setAttribute('aria-expanded', String(open));
-  if (open) {
-    ui.searchInput.focus();
-    ui.searchInput.select();
-  }
-  flipbook.handleResize();
-}
-
-function renderSearchStatus() {
-  const done = search.indexedCount();
-  if (search.isReady()) {
-    ui.searchStatus.textContent = '';
-    return;
-  }
-  ui.searchStatus.textContent = `Preparing search… ${done} of ${pageCount} pages ready`;
-}
-
-let searchTimer = null;
-
-function runSearch() {
-  const term = ui.searchInput.value.trim();
-  ui.searchResults.textContent = '';
-
-  if (term.length < 2) {
-    renderSearchStatus();
-    return;
-  }
-
-  const hits = search.query(term);
-
-  // While the index is incomplete, say so plainly and promise the update, rather
-  // than presenting a partial count as if it were the answer.
-  const pending = !search.isReady();
-  ui.searchStatus.classList.toggle('busy', pending);
-
-  if (!hits.length) {
-    ui.searchStatus.textContent = pending
-      ? `Still reading the magazine (${search.indexedCount()} of ${pageCount} pages) — results will appear here.`
-      : `No matches for “${term}”.`;
-    return;
-  }
-
-  const count = `${hits.length} page${hits.length === 1 ? '' : 's'} match “${term}”`;
-  ui.searchStatus.textContent = pending
-    ? `${count} so far — still reading (${search.indexedCount()} of ${pageCount} pages).`
-    : `${count}.`;
-
-  const frag = document.createDocumentFragment();
-  for (const hit of hits) {
-    const li = document.createElement('li');
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'search-hit';
-    btn.innerHTML =
-      `<span class="search-hit-page">Page ${hit.page}</span>` +
-      `<span class="search-hit-snippet">${hit.snippet}</span>`;
-    btn.addEventListener('click', () => goToHit(hit));
-    li.appendChild(btn);
-    frag.appendChild(li);
-  }
-  ui.searchResults.appendChild(frag);
-}
-
-async function goToHit(hit) {
-  flipbook.goTo(hit.page);
-  if (window.innerWidth < 900) setSearch(false);
-
-  // The text layer for that page may not exist yet; give the render a moment.
-  await new Promise((r) => setTimeout(r, 350));
-  const pageEl = flipbook.getPageElement(hit.page);
-  if (pageEl) {
-    highlightItems(pageEl.querySelector('.text-layer'), hit.items);
-    lastHighlight = hit.page;
-  }
 }
 
 /* ---------------- fullscreen ---------------- */
@@ -311,24 +207,6 @@ function toggleImmersive() {
   flipbook.handleResize();
 }
 
-/* ---------------- text selection ---------------- */
-
-function setSelecting(on) {
-  selecting = on;
-  ui.selectBtn.setAttribute('aria-pressed', String(on));
-  flipbook.setSelecting(on);
-
-  // A selection left highlighted swallows the next drag, so turning the mode off
-  // has to clear it or the first attempt to flip a page appears to do nothing.
-  if (!on) {
-    const sel = window.getSelection();
-    if (sel) sel.removeAllRanges();
-  }
-  ui.live.textContent = on
-    ? 'Text selection on. Use the arrows or page list to turn pages.'
-    : 'Text selection off. Drag a page to turn it.';
-}
-
 /* ---------------- wiring ---------------- */
 
 function wire() {
@@ -348,18 +226,6 @@ function wire() {
   ui.panelClose.addEventListener('click', () => setPanel(false));
   ui.scrim.addEventListener('click', () => setPanel(false));
 
-  ui.searchBtn.addEventListener('click', () => setSearch(ui.searchDrawer.hidden));
-  ui.searchClose.addEventListener('click', () => setSearch(false));
-  ui.searchForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    runSearch();
-  });
-  ui.searchInput.addEventListener('input', () => {
-    clearTimeout(searchTimer);
-    searchTimer = setTimeout(runSearch, 180);
-  });
-
-  ui.selectBtn.addEventListener('click', () => setSelecting(!selecting));
   ui.zoomBtn.addEventListener('click', () => zoom.open(flipbook.getCurrentPage()));
   ui.fullscreenBtn.addEventListener('click', toggleFullscreen);
 
@@ -369,7 +235,6 @@ function wire() {
 
   // Double-tap or double-click a page to zoom into it.
   ui.book.addEventListener('dblclick', (event) => {
-    if (selecting) return;
     const pageEl = event.target.closest('.page');
     const page = pageEl ? Number(pageEl.dataset.page) : flipbook.getCurrentPage();
     zoom.open(page);
@@ -379,7 +244,7 @@ function wire() {
   ui.book.addEventListener(
     'touchend',
     (event) => {
-      if (selecting || event.touches.length) return;
+      if (event.touches.length) return;
       const now = Date.now();
       if (now - lastTap < 300) {
         const pageEl = event.target.closest('.page');
@@ -398,20 +263,12 @@ function wire() {
 
     if (event.key === 'Escape') {
       if (zoom.isOpen()) zoom.close();
-      else if (!ui.searchDrawer.hidden) setSearch(false);
       else if (panelOpen) setPanel(false);
       else if (document.body.classList.contains('immersive')) toggleImmersive();
       return;
     }
 
-    if (typing) return;
-
-    if (event.key === '/') {
-      event.preventDefault();
-      setSearch(true);
-      return;
-    }
-    if (zoom.isOpen()) return;
+    if (typing || zoom.isOpen()) return;
 
     switch (event.key) {
       case 'ArrowRight':
@@ -484,7 +341,6 @@ async function boot() {
     viewport: el('zoom-viewport'),
     surface: el('zoom-surface'),
     canvas: el('zoom-canvas'),
-    text: el('zoom-text'),
     label: el('zoom-label'),
     hint: el('zoom-hint'),
     zoomIn: el('zoom-in'),
@@ -535,27 +391,13 @@ async function boot() {
     ui.loading.hidden = true;
     ui.pager.hidden = false;
 
-    // Everything below is enrichment — it must never block reading.
-    //
-    // Contents detection runs before the search index is started: it only needs
-    // the opening pages, whereas indexing reads all of them, and on a large
-    // document letting indexing go first leaves the toolbar button missing for
-    // several seconds after the magazine is already readable.
-    thumbnails
-      .findContentsPage(pageCount)
-      .then((page) => {
-        if (page) {
-          contentsPage = page;
-          ui.contentsBtn.hidden = false;
-        }
-      })
-      .finally(() =>
-        search.build(pageCount, renderSearchStatus, () => {
-          // Re-run any query typed while the index was still building; its
-          // result was incomplete and would otherwise stay wrong on screen.
-          if (ui.searchInput.value.trim().length >= 2) runSearch();
-        }),
-      );
+    // Enrichment — must never block reading.
+    thumbnails.findContentsPage(pageCount).then((page) => {
+      if (page) {
+        contentsPage = page;
+        ui.contentsBtn.hidden = false;
+      }
+    });
   } catch (err) {
     console.error(err);
     showError(...describeFailure(err));

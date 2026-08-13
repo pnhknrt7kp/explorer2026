@@ -1,8 +1,8 @@
 # The Explorer — online flipbook
 
 Shows a PDF magazine as a page-turning flipbook in any web browser, on desktop,
-laptop, tablet and phone. Readers can flip pages, zoom in, search the text,
-jump to any page from a thumbnail list, and download the original PDF.
+laptop, tablet and phone. Readers can flip pages, zoom in, jump to any page from
+a thumbnail list, and download the original PDF.
 
 It is built from two free, open-source libraries and needs no licence, no
 account, no subscription and no internet service. Everything it uses is inside
@@ -20,7 +20,7 @@ this folder.
 
 That is the whole job. There is nothing to rebuild and no code to edit. The
 viewer reads the PDF when someone opens the page, so it works out the number of
-pages, the page shape, the thumbnails and the search index on its own.
+pages, the page shape, the thumbnails and the contents shortcut on its own.
 
 ### On GitHub
 
@@ -118,12 +118,10 @@ small file before relying on it.
 | Action | How |
 |---|---|
 | Turn the page | Drag the corner of a page, click the page edge, or use the arrows at the bottom |
-| Keyboard | `←` `→` or `Page Up` / `Page Down`; `Home` and `End` for the first and last page; `f` for full screen; `/` to search |
+| Keyboard | `←` `→` or `Page Up` / `Page Down`; `Home` and `End` for the first and last page; `f` for full screen |
 | Zoom | Double-tap or double-click a page. Then pinch, scroll, or use `+` / `−`. Drag to move around |
 | Jump to a page | Open the menu (top left) for thumbnails, or type a page number in the box at the bottom |
 | Contents | The list button in the toolbar jumps to the magazine's own contents page |
-| Search | The magnifier searches every page and lists the matches |
-| Select text | The toolbar button turns text selection on so text can be copied. While it is on, drag no longer turns the page — use the arrows instead. Not shown on phones, where zoom is the better tool |
 | Download | The download arrow gives them the original PDF |
 
 Sharing a link to a particular page works: `...?page=42` opens on page 42, and
@@ -175,12 +173,14 @@ forbids commercial use and it has had no updates in over twelve years.
 StPageFlip is MIT-licensed and maintained.
 
 **Why only a few pages are drawn at a time.** A rendered A4 page uses several
-megabytes of memory, so drawing all 98 at once would ask the browser for
+megabytes of memory, so drawing all 106 at once would ask the browser for
 hundreds of megabytes. iPhones and iPads silently show blank pages when they run
 out. The viewer therefore keeps only the pages near the reader in memory and
 releases the rest. This is why page count barely affects how well it runs.
 
-**Why search indexes each page twice.** The PDF's internal text loses the spaces
-at the end of lines, so "adipiscing elit" is stored as "adipiscingelit". Each
-page is indexed both with and without spaces, and searches check both, so
-phrases that run across a line break are still found.
+**There is no text search or text selection.** Both were built and then removed:
+they depended on a transparent text layer over each page, and StPageFlip claims
+the same mouse events to drive the page-turn gesture, which made the two
+unreliable together. Readers who need to search or copy text can use the
+download button and their own PDF reader, which does both properly. Removing the
+text layer also cut a good deal of per-page DOM work.

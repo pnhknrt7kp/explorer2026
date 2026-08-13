@@ -177,7 +177,7 @@ export function retainOnly(keep) {
   }
 }
 
-/** Text items for a page, cached — the search index and text layer share this. */
+/** Text items for a page, cached. Used to locate the contents page. */
 export function getTextContent(pageNum) {
   if (!textCache.has(pageNum)) {
     textCache.set(

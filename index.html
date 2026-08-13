@@ -25,12 +25,6 @@
     <button type="button" class="icon-btn" id="btn-contents" aria-label="Go to contents" hidden>
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h3M4 12h3M4 18h3M10 6h10M10 12h10M10 18h10"/></svg>
     </button>
-    <button type="button" class="icon-btn" id="btn-search" aria-label="Search" aria-expanded="false" aria-controls="search-drawer">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg>
-    </button>
-    <button type="button" class="icon-btn" id="btn-select" aria-label="Select text" aria-pressed="false">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h6M8 4v13M5 17h6"/><path d="M14 9h5M16.5 9v8M14 17h5"/></svg>
-    </button>
     <button type="button" class="icon-btn" id="btn-zoom" aria-label="Zoom into page">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21M8 11h6M11 8v6"/></svg>
     </button>
@@ -42,17 +36,6 @@
     </button>
   </div>
 </header>
-
-<!-- Search -->
-<div class="drawer" id="search-drawer" hidden>
-  <form class="search-form" id="search-form" role="search">
-    <label class="sr-only" for="search-input">Search the magazine</label>
-    <input type="search" id="search-input" placeholder="Search the magazine…" autocomplete="off" spellcheck="false">
-    <button type="button" class="text-btn" id="search-close">Close</button>
-  </form>
-  <p class="search-status" id="search-status" role="status" aria-live="polite"></p>
-  <ul class="search-results" id="search-results"></ul>
-</div>
 
 <!-- Thumbnails -->
 <aside class="panel" id="panel" aria-label="Pages" inert>
@@ -122,7 +105,6 @@
   <div class="zoom-viewport" id="zoom-viewport">
     <div class="zoom-surface" id="zoom-surface">
       <canvas id="zoom-canvas"></canvas>
-      <div class="text-layer" id="zoom-text"></div>
     </div>
   </div>
   <p class="zoom-hint" id="zoom-hint">Pinch or scroll to zoom · drag to pan</p>

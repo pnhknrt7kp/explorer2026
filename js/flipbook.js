@@ -7,7 +7,6 @@
  */
 
 import * as pdfSource from './pdf-source.js';
-import { buildTextLayer, clearTextLayer } from './text-layer.js';
 
 // Pages either side of the current spread to render ahead of time.
 const PRELOAD = 2;
@@ -45,21 +44,6 @@ function buildPages(container, count) {
     canvas.setAttribute('role', 'img');
     canvas.setAttribute('aria-label', `Page ${i}`);
     el.appendChild(canvas);
-
-    const textLayer = document.createElement('div');
-    textLayer.className = 'text-layer';
-
-    // StPageFlip listens for mousedown on its own block element — an ancestor of
-    // this layer — and calls preventDefault() to drive the drag-to-flip gesture.
-    // That also cancels the browser's native text selection, so enabling
-    // pointer-events on the layer is not enough on its own. Stopping propagation
-    // here keeps the event from reaching StPageFlip while leaving the default
-    // action intact, which is what actually starts a selection.
-    textLayer.addEventListener('mousedown', (event) => {
-      if (document.body.classList.contains('selecting')) event.stopPropagation();
-    });
-
-    el.appendChild(textLayer);
 
     const spinner = document.createElement('div');
     spinner.className = 'page-spinner';
@@ -153,8 +137,6 @@ async function ensurePage(pageNum) {
   try {
     await pdfSource.renderPage(pageNum, canvas, cssWidth, config.maxRenderScale);
     el.classList.add('loaded');
-    // Text layer is cheap next to the canvas and enables selection + highlights.
-    await buildTextLayer(pageNum, el.querySelector('.text-layer'), cssWidth);
   } catch (err) {
     console.warn(`Page ${pageNum} failed to render`, err);
   }
@@ -172,14 +154,11 @@ function updateWindow(current) {
 
   pdfSource.retainOnly(keep);
 
-  // Drop the DOM text/loaded state for released pages so they re-render clean.
+  // Drop the loaded state for released pages so they re-render clean.
   for (let i = 1; i <= pageCount; i++) {
     if (!keep.has(i)) {
       const el = pageEls[i - 1];
-      if (el && el.classList.contains('loaded')) {
-        el.classList.remove('loaded');
-        clearTextLayer(el.querySelector('.text-layer'));
-      }
+      if (el) el.classList.remove('loaded');
     }
   }
 
@@ -316,17 +295,6 @@ export function handleResize() {
   for (const el of pageEls) el.classList.remove('loaded');
   pdfSource.retainOnly(new Set());
   updateWindow(getCurrentPage());
-}
-
-/**
- * Turns text selection on or off. While selection is on, dragging selects text
- * instead of curling the page, so page turning goes through the buttons, keys
- * and thumbnails. Trying to support both gestures at once fights the user.
- */
-export function setSelecting(on) {
-  const container = document.getElementById('book');
-  container.classList.toggle('selecting', on);
-  document.body.classList.toggle('selecting', on);
 }
 
 export function getPageElement(pageNum) {
