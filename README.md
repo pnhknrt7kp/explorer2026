@@ -10,10 +10,9 @@ this folder.
 
 ---
 
-> **The PDF in this repository is a placeholder.** `assets/document.pdf` is a
-> nine-page sample so the viewer can be published and tested without putting
-> unreleased content online. Replace it with the real magazine when the content
-> is cleared — see below.
+> **Currently published:** *The Explorer 2025*, a previously released edition
+> (106 pages). Unreleased drafts must not be committed — keep them as
+> `*.local.pdf`, which git ignores. See "Previewing a draft" below.
 
 ## Publishing a new edition
 

@@ -127,8 +127,15 @@ export async function findContentsPage(pageCount, limit = 15) {
   for (let i = 1; i <= last; i++) {
     try {
       const tc = await pdfSource.getTextContent(i);
-      const text = tc.items.map((item) => item.str).join(' ');
-      if (/table\s*of\s*contents|^\s*contents\s*$/i.test(text)) return i;
+      const text = tc.items.map((item) => item.str).join(' ').replace(/\s+/g, ' ').trim();
+
+      // Either the full phrase anywhere, or a page that opens with "Contents"
+      // as its heading. Real magazines use both forms, and a contents page's
+      // heading is followed by the entry list, so anchoring to the start rather
+      // than requiring the word to stand alone is what actually matches.
+      if (/\btable\s*of\s*contents\b/i.test(text) || /^contents\b/i.test(text)) {
+        return i;
+      }
     } catch {
       // Unreadable page — just keep looking.
     }

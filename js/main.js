@@ -523,14 +523,20 @@ async function boot() {
     ui.pager.hidden = false;
 
     // Everything below is enrichment — it must never block reading.
-    search.build(pageCount, renderSearchStatus);
-
-    thumbnails.findContentsPage(pageCount).then((page) => {
-      if (page) {
-        contentsPage = page;
-        ui.contentsBtn.hidden = false;
-      }
-    });
+    //
+    // Contents detection runs before the search index is started: it only needs
+    // the opening pages, whereas indexing reads all of them, and on a large
+    // document letting indexing go first leaves the toolbar button missing for
+    // several seconds after the magazine is already readable.
+    thumbnails
+      .findContentsPage(pageCount)
+      .then((page) => {
+        if (page) {
+          contentsPage = page;
+          ui.contentsBtn.hidden = false;
+        }
+      })
+      .finally(() => search.build(pageCount, renderSearchStatus));
   } catch (err) {
     console.error(err);
     showError(...describeFailure(err));

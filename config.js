@@ -7,7 +7,7 @@
  */
 window.FLIPBOOK_CONFIG = {
   // Shown in the toolbar and as the browser tab title.
-  title: 'The Explorer 2026',
+  title: 'The Explorer 2025',
 
   // Where the PDF lives, relative to this folder. To publish a new edition,
   // replace assets/document.pdf and leave this line alone.
