@@ -1,7 +1,8 @@
 /*
  * flipbook.js — StPageFlip integration and the render window.
  *
- * StPageFlip handles the curl animation and the portrait/landscape switch. Our
+ * StPageFlip handles the curl animation. The book is locked to a two-page
+ * spread at every screen size, so there is no portrait mode to switch to. Our
  * job is to feed it page surfaces and to make sure only a handful of pages hold
  * pixels at any moment (see pdf-source.js for why that matters).
  */
@@ -58,15 +59,16 @@ function buildPages(container, count) {
 }
 
 /*
- * Sizing note. In 'stretch' mode StPageFlip measures its own block element's
- * offsetWidth/offsetHeight and derives the page box from that, and it switches
- * to a single page when that width drops below 2 * minWidth. So two things have
- * to line up: #book must be given an explicit box (otherwise its height is
- * whatever 98 stacked divs happen to measure, and pages overflow the screen),
- * and our portrait threshold must equal 2 * minWidth or the library and this
- * module would disagree about how many pages are on screen.
+ * Sizing note. The book is always a two-page spread, on every device and at
+ * every width — see usePortrait below. In 'stretch' mode StPageFlip measures its
+ * own block element's offsetWidth/offsetHeight and derives the page box from
+ * that, so #book must be given an explicit box (otherwise its height is whatever
+ * 98 stacked divs happen to measure, and pages overflow the screen). With
+ * usePortrait off the library's own maths is always blockWidth / 2, which is
+ * exactly what computeSize hands it, so the two never disagree.
  */
-const PORTRAIT_BELOW = 768;      // must stay equal to 2 * minWidth below
+// Pages on screen at once. Fixed at two: the spread never collapses.
+const SPREAD_PAGES = 2;
 const MAX_PAGE_WIDTH = 1200;
 
 /** The wrap's content box, excluding the padding that keeps the pager clear. */
@@ -78,15 +80,13 @@ function availableBox(wrap) {
 }
 
 /**
- * Largest page that fits, preserving the PDF's aspect ratio. Returns the single
- * page size plus how many pages are on screen.
+ * Largest single page that fits alongside its neighbour, preserving the PDF's
+ * aspect ratio. Always sized for a two-page spread, however narrow the screen.
  */
 function computeSize(wrap) {
   const avail = availableBox(wrap);
-  const portrait = avail.w < PORTRAIT_BELOW;
-  const spreadPages = portrait ? 1 : 2;
 
-  let w = Math.min(avail.w / spreadPages, MAX_PAGE_WIDTH);
+  let w = Math.min(avail.w / SPREAD_PAGES, MAX_PAGE_WIDTH);
   let h = w / ratio;
   if (h > avail.h) {
     h = avail.h;
@@ -96,8 +96,7 @@ function computeSize(wrap) {
   return {
     width: Math.floor(w),
     height: Math.floor(h),
-    spreadPages,
-    portrait,
+    spreadPages: SPREAD_PAGES,
   };
 }
 
@@ -197,14 +196,16 @@ export async function init({ container, wrap, config: cfg, startPage = 1, onChan
     width,
     height,
     size: 'stretch',
-    // Half of PORTRAIT_BELOW: this is what makes StPageFlip drop to a single
-    // page at the same width our own layout maths switches at.
-    minWidth: PORTRAIT_BELOW / 2,
+    // In stretch mode minWidth/minHeight are not clamps, they are only the
+    // threshold at which the library would collapse to one page — which
+    // usePortrait: false rules out — so keep them permissive.
+    minWidth: 100,
     maxWidth: MAX_PAGE_WIDTH,
-    minHeight: 250,
+    minHeight: 100,
     maxHeight: 2400,
-    // Single page on phones, two-page spread on tablet and desktop.
-    usePortrait: true,
+    // Always a two-page spread, on phones and everywhere else. The pages get
+    // small on a narrow screen; double-tap to zoom is how you read them.
+    usePortrait: false,
     // Page 1 and the back page stand alone, as a real magazine does.
     showCover: true,
     autoSize: true,
@@ -234,8 +235,9 @@ export async function init({ container, wrap, config: cfg, startPage = 1, onChan
   });
 
   flip.on('changeOrientation', () => {
-    // Page boxes changed size, so the canvases need re-rendering at the new
-    // width or they look soft. Clearing 'loaded' forces that.
+    // With usePortrait off this can only fire once, when the library settles on
+    // landscape at first layout. Page boxes have just taken their real size, so
+    // re-render the canvases at that width or they look soft.
     for (const el of pageEls) el.classList.remove('loaded');
     pdfSource.retainOnly(new Set());
     updateWindow(getCurrentPage());
