@@ -17,7 +17,18 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 DRAFT="${1:-assets/Explorer Magazine 2026 draft.pdf}"
-PROJECT="${PROJECT:-explorer-draft}"
+
+# The project name decides the pages.dev hostname, and that hostname is the only
+# thing keeping the draft obscure in the moments before an Access policy applies.
+# So it is kept in .deploy-project, which git ignores, rather than in this file —
+# this repository is public.
+PROJECT="${PROJECT:-$(cat .deploy-project 2>/dev/null || true)}"
+if [[ -z "$PROJECT" ]]; then
+  echo "error: no Cloudflare Pages project configured." >&2
+  echo "       Put the project name in .deploy-project (git ignores it), or" >&2
+  echo "       run with PROJECT=<name> ./deploy-draft.sh" >&2
+  exit 1
+fi
 TITLE="${TITLE:-Explorer Magazine 2026 — DRAFT}"
 
 if [[ ! -f "$DRAFT" ]]; then
@@ -64,6 +75,12 @@ echo "Draft:   $DRAFT ($(du -h "$DRAFT" | cut -f1))"
 echo "Title:   $TITLE"
 echo "Project: $PROJECT"
 echo
+
+# Pages rejects a deploy for a project that does not exist yet and there is no
+# --create flag, so make the first run self-sufficient. If this fails for any
+# other reason the deploy below surfaces it properly.
+npx --yes wrangler@latest pages project create "$PROJECT" \
+  --production-branch main >/dev/null 2>&1 || true
 
 npx --yes wrangler@latest pages deploy "$STAGE" \
   --project-name "$PROJECT" \

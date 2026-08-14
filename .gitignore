@@ -10,3 +10,7 @@ assets/*.pdf
 
 # The older convention, kept because it also covers PDFs outside assets/.
 *.local.pdf
+
+# The Cloudflare Pages project name for draft deploys. The hostname it produces
+# is what keeps an ungated draft obscure, so it stays out of this public repo.
+.deploy-project
