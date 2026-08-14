@@ -67,23 +67,41 @@ git history.
 The default is set by the `DRAFT` line near the top of `deploy-draft.sh` — point
 it at the newest draft when one supersedes another.
 
-**First time only**, three steps in the Cloudflare dashboard:
+**First time only**, five steps in the Cloudflare dashboard. None are obvious, so
+they are spelled out:
 
 1. Sign in (a free account is enough) and run the script once. It will prompt
    you to authorise `wrangler` in the browser, then create the project and print
    a `https://<project>.pages.dev` URL.
-2. Go to **Zero Trust › Access › Applications** and add a *self-hosted*
-   application for that hostname.
-3. Give it a policy that **allows** the *emails* of your reviewers. Cloudflare
-   emails each of them a one-time code to log in — they do not need accounts.
+2. **Zero Trust › Settings › Authentication › Login methods › Add new › One-time
+   PIN.** Do this *first*: without it the login page offers only a Cloudflare
+   account sign-in, with no box for a reviewer to type their email into.
+3. **Zero Trust › Access › Applications** — add a *self-hosted* application for
+   that hostname, then a **second** one for `*.<project>.pages.dev`. The wildcard
+   matters: every deployment also gets its own `<hash>.<project>.pages.dev`
+   address, and the first application does not cover those.
+4. On **each** application, give it a policy that **allows** the *emails* of your
+   reviewers, and include your own address so you can test. Under the
+   application's **Authentication**, make sure **One-time PIN** is accepted —
+   an application created before step 2 may not pick it up on its own.
+5. Wait a minute or two, then load the URL in a private window. You should get an
+   email field, a code in your inbox, and then the draft.
 
-After that, every later draft is one command; the policy stays in place. To add
-or drop a reviewer, edit the email list in that policy.
+After that, every later draft is one command; the policies stay in place. To add
+or drop a reviewer, edit the email list in both of them.
 
-> **The gate is not on until step 3 is finished.** Between the first deploy and
-> the policy being saved, anyone with the URL can read the draft, so do not send
-> the link until you have tested it yourself in a private window and been asked
-> to log in.
+> **The gate is not on until the policies are saved and have propagated.** Until
+> then anyone with the URL can read the draft, so do not send the link before you
+> have loaded it yourself in a private window and been asked to log in. The
+> project name is deliberately random, and kept in the gitignored
+> `.deploy-project`, so the URL is at least not guessable in the meantime.
+
+Two failure modes worth recognising:
+
+| What you see | What it means |
+|---|---|
+| Only "Sign in with: Cloudflare", no email box | Step 2 not done, or One-time PIN not accepted by that application |
+| "That account does not have access" | You logged in with an identity whose email is not in the policy's include list |
 
 Free-plan limits are generous but not unlimited (Cloudflare Access covers a
 small reviewer list at no cost); check current pricing if your list grows past a
