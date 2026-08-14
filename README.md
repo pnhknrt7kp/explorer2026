@@ -11,8 +11,10 @@ this folder.
 ---
 
 > **Currently published:** *The Explorer 2025*, a previously released edition
-> (106 pages). Unreleased drafts must not be committed — keep them as
-> `*.local.pdf`, which git ignores. See "Previewing a draft" below.
+> (106 pages). Unreleased drafts must not be committed — drop them in `assets/`
+> under any name but `document.pdf` and git will ignore them. See "Previewing a
+> draft" below, and "Sharing a draft with reviewers" to put one online behind a
+> login.
 
 ## Publishing a new edition
 
@@ -39,14 +41,53 @@ exactly the same.
 
 ### Previewing a draft without publishing it
 
-Anything named `*.local.pdf` is ignored by git and can never be committed by
-accident. So a draft can sit safely next to the placeholder:
+**Every PDF in `assets/` except the released `document.pdf` is ignored by git**,
+whatever you name it, so a draft can sit safely next to the published edition and
+cannot be committed by accident. To preview one:
 
-1. Put it at `assets/document.local.pdf`.
-2. Open `http://localhost:8000/?pdf=assets/document.local.pdf`.
+1. Put it in `assets/` — any name will do, e.g. `assets/explorer-2026-draft1.pdf`.
+2. Open `http://localhost:8000/?pdf=assets/explorer-2026-draft1.pdf`.
 
 The viewer behaves identically; only the file it reads changes. This is the
 right way to check a new edition before it is cleared for release.
+
+### Sharing a draft with reviewers
+
+Reviewers who are not sitting at this computer need the draft on the web, which
+the public GitHub Pages site cannot do — that site, and this repository, are
+readable by anyone. `deploy-draft.sh` puts the draft on a **separate Cloudflare
+Pages site behind a login**, and uploads it directly, so the draft never enters
+git history.
+
+```sh
+./deploy-draft.sh                            # deploys the current draft
+./deploy-draft.sh 'assets/another draft.pdf' # a specific draft (quote spaces)
+```
+
+The default is set by the `DRAFT` line near the top of `deploy-draft.sh` — point
+it at the newest draft when one supersedes another.
+
+**First time only**, three steps in the Cloudflare dashboard:
+
+1. Sign in (a free account is enough) and run the script once. It will prompt
+   you to authorise `wrangler` in the browser, then create the project and print
+   a `https://<project>.pages.dev` URL.
+2. Go to **Zero Trust › Access › Applications** and add a *self-hosted*
+   application for that hostname.
+3. Give it a policy that **allows** the *emails* of your reviewers. Cloudflare
+   emails each of them a one-time code to log in — they do not need accounts.
+
+After that, every later draft is one command; the policy stays in place. To add
+or drop a reviewer, edit the email list in that policy.
+
+> **The gate is not on until step 3 is finished.** Between the first deploy and
+> the policy being saved, anyone with the URL can read the draft, so do not send
+> the link until you have tested it yourself in a private window and been asked
+> to log in.
+
+Free-plan limits are generous but not unlimited (Cloudflare Access covers a
+small reviewer list at no cost); check current pricing if your list grows past a
+few dozen people.
 
 ### A note on names
 

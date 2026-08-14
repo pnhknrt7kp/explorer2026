@@ -1,7 +1,12 @@
 node_modules/
 .DS_Store
 
-# Local-only documents. Keep unreleased or draft PDFs under a *.local.pdf name
-# so they cannot be committed to a public repository by accident. Preview one
-# with ?pdf=assets/document.local.pdf
+# Local-only documents. This repository is PUBLIC, so the only PDF that may ever
+# be committed is the released edition at assets/document.pdf. Every other PDF in
+# assets/ is ignored by default — drafts, proofs, working copies — whatever it
+# happens to be named. Safer than remembering a naming convention.
+assets/*.pdf
+!assets/document.pdf
+
+# The older convention, kept because it also covers PDFs outside assets/.
 *.local.pdf
