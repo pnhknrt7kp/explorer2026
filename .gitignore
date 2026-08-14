@@ -14,3 +14,6 @@ assets/*.pdf
 # The Cloudflare Pages project name for draft deploys. The hostname it produces
 # is what keeps an ungated draft obscure, so it stays out of this public repo.
 .deploy-project
+
+# Local wrangler state, created by deploys.
+.wrangler/
